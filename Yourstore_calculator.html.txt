@@ -1,0 +1,142 @@
+Yourstore_calculator.html
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>حاسبة أسعار الأبواب والنوافذ</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; direction: rtl; }
+    label, select, input { display: block; margin-bottom: 10px; font-size: 16px; }
+    input[type="number"] { width: 100px; }
+    .result { margin-top: 20px; font-weight: bold; font-size: 18px; }
+    .box { background: white; padding: 20px; border-radius: 10px; max-width: 700px; box-shadow: 0 0 10px #ccc; margin: auto; }
+    button { margin-top: 10px; padding: 8px 12px; font-size: 16px; cursor: pointer; }
+    a { color: #0077cc; text-decoration: none; font-size: 16px; margin-top: 20px; display: inline-block; }
+    header img { width: 150px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <header style="text-align:center;">
+      <img src="yourstore_logo.png" alt="شعار Your Store">
+      <h2>حاسبة أسعار الأبواب والنوافذ</h2>
+    </header>
+
+    <label for="type">نوع المنتج:</label>
+    <select id="type">
+      <optgroup label="نوافذ">
+        <option value="dbl_dbl">نافذة دبل جلاس دبل فريم</option>
+        <option value="dbl_sngl">نافذة دبل جلاس سنجل فريم</option>
+        <option value="elec">نافذة كهربائية</option>
+        <option value="skylight_no">سكاي لايت بدون ماكينة</option>
+        <option value="skylight_yes">سكاي لايت مع ماكينة</option>
+        <option value="cw_strong">كارتن وول قوي</option>
+        <option value="cw_weak">كارتن وول أقل</option>
+      </optgroup>
+      <optgroup label="أبواب WPC">
+        <option value="wpc_empty">WPC فارغ</option>
+        <option value="wpc_wood">WPC مع خشب</option>
+        <option value="wpc_sound">WPC ضد الصوت</option>
+        <option value="wpc_aluframe">WPC مع فريم ألمنيوم</option>
+        <option value="wpc_sliding">باب سحب WPC</option>
+      </optgroup>
+      <optgroup label="أبواب ألمنيوم">
+        <option value="alum_empty">ألمنيوم فارغ</option>
+        <option value="alum_wood">ألمنيوم مع خشب</option>
+        <option value="alum_full">ألمنيوم فل</option>
+        <option value="alum_hidden">باب مخفي</option>
+      </optgroup>
+    </select>
+
+    <label for="motion">نوع الحركة (للنوافذ فقط):</label>
+    <select id="motion">
+      <option value="none">ثابت</option>
+      <option value="1">حركة</option>
+      <option value="2">حركتين</option>
+    </select>
+
+    <label>الطول (متر):</label>
+    <input type="number" id="height" step="0.01">
+
+    <label>العرض (متر):</label>
+    <input type="number" id="width" step="0.01">
+
+    <label>الكمية:</label>
+    <input type="number" id="qty" value="1">
+
+    <button onclick="calculate()">احسب السعر</button>
+    <button onclick="downloadPDF()">تحميل عرض السعر PDF</button>
+
+    <div class="result" id="output"></div>
+    <a href="https://www.instagram.com/yourstore.home" target="_blank">تابعنا على إنستغرام @yourstore.home</a>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const prices = {
+      dbl_dbl: { price: 39, cbm: 0.13, motion: { 1: 40, 2: 19 } },
+      dbl_sngl: { price: 31, cbm: 0.07, motion: { 1: 20, 2: 12 } },
+      elec: { price: 102, cbm: 0.13 },
+      skylight_no: { price: 56, cbm: 0.13 },
+      skylight_yes: { price: 145, cbm: 0.13 },
+      cw_strong: { price: 52, cbm: 0.15 },
+      cw_weak: { price: 42, cbm: 0.15 },
+      wpc_empty: { price: 45, cbm_factor: 0.11 },
+      wpc_wood: { price: 50, cbm_factor: 0.11 },
+      wpc_sound: { price: 60, cbm_factor: 0.11 },
+      wpc_aluframe: { price: 67, cbm_factor: 0.11 },
+      wpc_sliding: { price: 65, cbm_factor: 0.11 },
+      alum_empty: { price: 65, cbm_factor: 0.11 },
+      alum_wood: { price: 75, cbm_factor: 0.11 },
+      alum_full: { price: 85, cbm_factor: 0.11 },
+      alum_hidden: { price: 110, cbm_factor: 0.11 },
+    };
+
+    let lastResult = '';
+
+    function calculate() {
+      const type = document.getElementById('type').value;
+      const motion = document.getElementById('motion').value;
+      const h = parseFloat(document.getElementById('height').value);
+      const w = parseFloat(document.getElementById('width').value);
+      const qty = parseInt(document.getElementById('qty').value);
+
+      const area = h * w * qty;
+      const base = prices[type].price;
+      const motionAdd = prices[type].motion ? prices[type].motion[motion] || 0 : 0;
+      const pricePerM = base + motionAdd;
+      const total = area * pricePerM;
+      const cbm_factor = prices[type].cbm || prices[type].cbm_factor || 0.11;
+      const cbm = area * cbm_factor;
+      const shipping = cbm * 48;
+      const final = total + shipping;
+
+      lastResult = `المساحة: ${area.toFixed(2)} م²\\n` +
+                   `السعر للمتر: ${pricePerM.toFixed(2)} ريال\\n` +
+                   `السعر الإجمالي: ${total.toFixed(2)} ريال\\n` +
+                   `الحجم: ${cbm.toFixed(2)} CBM\\n` +
+                   `الشحن: ${shipping.toFixed(2)} ريال\\n` +
+                   `الإجمالي النهائي: ${final.toFixed(2)} ريال`;
+
+      document.getElementById('output').innerHTML = lastResult.replace(/\\n/g, '<br>');
+    }
+
+    function downloadPDF() {
+      if (!lastResult) {
+        alert("يرجى حساب السعر أولاً");
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFont("Arial");
+      doc.text("عرض سعر الأبواب والنوافذ", 20, 20);
+      const lines = lastResult.split("\\n");
+      lines.forEach((line, idx) => {
+        doc.text(line, 20, 40 + idx * 10);
+      });
+      doc.save("عرض_سعر.pdf");
+    }
+  </script>
+</body>
+</html>
